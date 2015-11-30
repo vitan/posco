@@ -1,0 +1,74 @@
+#!/bin/sh
+#
+#    dataman-profile - service omega-agent status
+#    Copyright (C) 2015-2021 DataMan Inc.
+#
+#    Authors: weitao zhou <wtzhou@dataman-inc.com>
+#
+#    This program is free software; you can redistribute it and/or modify
+#    it under the terms of the GNU General Public License as published by
+#    the Free Software Foundation; either version 2 of the License, or
+#    (at your option) any later version.
+
+# ███████╗██╗  ██╗██╗   ██╗    ██████╗ ███████╗███╗   ██╗    ██╗   ██╗██╗   ██╗███╗   ██╗
+# ██╔════╝██║  ██║██║   ██║    ██╔══██╗██╔════╝████╗  ██║    ╚██╗ ██╔╝██║   ██║████╗  ██║
+# ███████╗███████║██║   ██║    ██████╔╝█████╗  ██╔██╗ ██║     ╚████╔╝ ██║   ██║██╔██╗ ██║
+# ╚════██║██╔══██║██║   ██║    ██╔══██╗██╔══╝  ██║╚██╗██║      ╚██╔╝  ██║   ██║██║╚██╗██║
+# ███████║██║  ██║╚██████╔╝    ██║  ██║███████╗██║ ╚████║       ██║   ╚██████╔╝██║ ╚████║
+# ╚══════╝╚═╝  ╚═╝ ╚═════╝     ╚═╝  ╚═╝╚══════╝╚═╝  ╚═══╝       ╚═╝    ╚═════╝ ╚═╝  ╚═══╝  @DataMan Inc.
+
+# Use colors, but only if connected to a terminal, and that terminal
+# supports them.
+if which tput >/dev/null 2>&1; then
+    ncolors=$(tput colors)
+fi
+if [ -t 1 ] && [ -n "$ncolors" ] && [ "$ncolors" -ge 8 ]; then
+    RED="$(tput setaf 1)"
+    GREEN="$(tput setaf 2)"
+    YELLOW="$(tput setaf 3)"
+    BLUE="$(tput setaf 4)"
+    BOLD="$(tput bold)"
+    NORMAL="$(tput sgr0)"
+else
+    RED=""
+    GREEN=""
+    YELLOW=""
+    BLUE=""
+    BOLD=""
+    NORMAL=""
+fi
+
+STATUS=$(service omega-agent status 2>/dev/null)
+if [ $? -eq 0 ]
+then
+    printf "ShuRenYun Service Status: "
+    if [[ ${STATUS} == *"running"* ]]
+    then
+        printf '%s' "$GREEN"
+        printf "RUNNING\n"
+        printf '%s' "$NORMAL"
+    else
+        printf '%s' "$RED"
+        printf "STOPPED\n"
+        printf '%s' "$NORMAL"
+        echo -n "ShuRenYun service has been stopped for some reason, Start shurenyun service [Y/N]: "
+        read start
+        confirm="Y y yes Yes YES"
+        [[ $confirm =~ $start ]] && sudo service omega-agent start || exit
+    fi
+else
+    echo -n "To use ShuRenYun service, please paste here the given "
+    printf '%s' "$BLUE"
+    printf "node identifier"
+    printf '%s' "$NORMAL"
+    echo -n " which is generated from "
+    printf '%s' "$BLUE"
+    printf "https://dashboard.shurenyun.com\n"
+    printf '%s' "$NORMAL"
+    echo ""
+    printf '%s' "$BLUE"
+    printf "node identifier: "
+    printf '%s' "$NORMAL"
+    read identifier
+    sudo -H OMEGA_ENV=prod bash -c "$(curl -Ls https://raw.githubusercontent.com/Dataman-Cloud/agent-installer/master/install-agent.sh)" -s $identifier
+fi
